@@ -16,16 +16,18 @@ namespace oo {
     class lockfree_container {
     public:
 
-        void push(const T &t) {
+        bool push(const T &t) {
             for (auto &node: m_data) {
                 if (node.full.acquire()) {
                     node.t = t;
                     node.empty.release();
 
                     m_empty.release();
-                    return;
+                    return true;
                 }
             }
+
+            return false;
         }
 
         bool pop(T &t) {
