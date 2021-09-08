@@ -23,3 +23,4 @@ endfunction()
 #
 
 add("test_multithreading")
+add("test_blocking_wait")
