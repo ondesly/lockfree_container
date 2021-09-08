@@ -21,20 +21,24 @@ namespace oo {
                 if (node.full.acquire()) {
                     node.t = t;
                     node.empty.release();
+
+                    m_empty.release();
                     return;
                 }
             }
         }
 
         bool pop(T &t) {
-            for (auto &node: m_data) {
-                if (node.empty.acquire()) {
-                    t = node.t;
-                    node.full.release();
+            do {
+                for (auto &node: m_data) {
+                    if (node.empty.acquire()) {
+                        t = node.t;
+                        node.full.release();
 
-                    return true;
+                        return true;
+                    }
                 }
-            }
+            } while (m_empty.acquire());
 
             return false;
         }
@@ -81,6 +85,7 @@ namespace oo {
     private:
 
         node m_data[c_capacity]{};
+        lock m_empty;
 
     };
 
