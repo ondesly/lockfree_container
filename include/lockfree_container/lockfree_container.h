@@ -9,6 +9,7 @@
 #pragma once
 
 #include <atomic>
+#include <functional>
 #include <iterator>
 
 namespace oo {
@@ -116,6 +117,49 @@ namespace oo {
                     }
                 }
             } while (m_empty.acquire());
+
+            return false;
+        }
+
+        bool insert(const T &t) {
+            const auto hash = std::hash<T>{}(t);
+            for (size_t i = 0; i < c_capacity; ++i) {
+                const auto index = (hash + i) % c_capacity;
+                auto &node = m_data[index];
+
+                if (node.full.acquire()) {
+                    node.t = t;
+                    node.empty.release();
+
+                    m_empty.release();
+                    return true;
+                } else {
+                    if (hash == std::hash<T>{}(node.t)) {
+                        return false;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        bool erase(const T &t) {
+            const auto hash = std::hash<T>{}(t);
+            for (size_t i = 0; i < c_capacity; ++i) {
+                const auto index = (hash + i) % c_capacity;
+                auto &node = m_data[index];
+
+                if (node.empty.acquire()) {
+                    if (hash == std::hash<T>{}(node.t)) {
+                        node.t = {};
+                        node.full.release();
+
+                        return true;
+                    } else {
+                        node.empty.release();
+                    }
+                }
+            }
 
             return false;
         }

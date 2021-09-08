@@ -24,3 +24,4 @@ endfunction()
 
 add("test_multithreading")
 add("test_blocking_wait")
+add("test_hash_set")
