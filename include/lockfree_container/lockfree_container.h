@@ -35,6 +35,7 @@ namespace oo {
                 for (auto &node: m_data) {
                     if (node.empty.acquire()) {
                         t = node.t;
+                        node.t = {};
                         node.full.release();
 
                         return true;
