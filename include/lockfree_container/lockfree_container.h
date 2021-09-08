@@ -9,12 +9,86 @@
 #pragma once
 
 #include <atomic>
+#include <iterator>
 
 namespace oo {
 
     template<class T, size_t c_capacity = 16>
     class lockfree_container {
     public:
+
+        class iterator : public std::iterator<std::forward_iterator_tag, T, size_t, T *, const T &> {
+        public:
+
+            iterator(lockfree_container *container, size_t index) : m_container(container), m_index(index) {
+                find_valid_index_and_acquire();
+            }
+
+            ~iterator() {
+                release_current_index();
+            }
+
+        public:
+
+            T &operator*() const {
+                return m_container->m_data[m_index].t;
+            }
+
+            iterator &operator++() {
+                release_current_index();
+                ++m_index;
+                find_valid_index_and_acquire();
+
+                return *this;
+            }
+
+            bool operator==(const iterator &other) const {
+                return m_index == other.m_index;
+            }
+
+            bool operator!=(const iterator &other) const {
+                return !(operator==(other));
+            }
+
+        private:
+
+            lockfree_container *m_container;
+            size_t m_index;
+
+        private:
+
+            void find_valid_index_and_acquire() {
+                if (m_index == c_capacity) {
+                    return;
+                }
+
+                for (size_t i = m_index; i < c_capacity; ++i) {
+                    if (m_container->m_data[i].empty.acquire()) {
+                        m_index = i;
+                        return;
+                    }
+                }
+
+                m_index = c_capacity;
+            }
+
+            void release_current_index() {
+                if (m_index != c_capacity) {
+                    m_container->m_data[m_index].empty.release();
+                }
+            }
+
+        };
+
+    public:
+
+        iterator begin() {
+            return iterator{this, 0};
+        }
+
+        iterator end() {
+            return iterator{this, c_capacity};
+        }
 
         bool push(const T &t) {
             for (auto &node: m_data) {
